@@ -14,6 +14,7 @@ library(ggbeeswarm)
 library(kableExtra)
 library(here)
 library(lubridate)
+library(RColorBrewer)
 ```
 
 ```{r}
@@ -70,17 +71,46 @@ Takeaways: The minimum count for juvenile hare trappings in the time period betw
 #data wrangling - creating a subset of juveniles grouped by grid and sex
 hares_juv_weights <- hares_raw %>% 
   filter(age == "j") %>% 
-  group_by(grid, sex)
+  mutate(sex_new = case_when(sex == "f" ~ "Female",
+                             sex == "m" ~ "Male",
+                             TRUE ~ "Unknown")) %>% 
+    group_by(grid, sex_new)
 
 #summarize by grid and sex, excluding NA values
 juv_weights_summary <- hares_raw %>% 
   filter(age == "j") %>% 
   filter(weight != "NA") %>% 
-  group_by(grid,sex) %>% 
+  mutate(sex_new = case_when(sex == "f" ~ "Female",
+                             sex == "m" ~ "Male",
+                             TRUE ~ "Unknown")) %>%
+  group_by(grid,sex_new) %>% 
   summarize(mean_weight = mean(weight),
             sd_weight = sd(weight),
             sample_size = n())
 
 #visualizing the data
+p <- ggplot() +
+  geom_beeswarm(data = hares_juv_weights, aes(x = sex_new, y = weight, color = sex_new),
+                size = 1.5,
+                alpha = 0.8) +
+  scale_color_brewer(palette = "Dark2") +
+  geom_point(data = juv_weights_summary, aes(x = sex_new, y = mean_weight)) +
+  geom_errorbar(data = juv_weights_summary,
+                aes(x = sex_new,
+                    ymin = mean_weight - sd_weight,
+                    ymax = mean_weight + sd_weight),
+                width = 0.3) +
+  labs(x = "Sex", y = "Weight (g)", 
+       title = "Weight distribution of juvenile hares at grid sites", caption = "WRITE A CAPTION") +
+  theme_light() +
+  theme(legend.position = "none")
+
+grid.labs <-c("Bonanza Black Spruce", "Bonanza Mature", "Bonanza Riparian")
+names(grid.labs) <- c("bonbs", "bonmat", "bonrip")
+
+p+facet_wrap(~grid, labeller = labeller(grid = grid.labs))
 ```
 
+**Write 2-3 sentences describing the main takeaways here!!**
+
+#### Comparing weights of male and female juvenile hares
